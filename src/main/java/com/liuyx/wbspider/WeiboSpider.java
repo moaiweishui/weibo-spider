@@ -1,152 +1,96 @@
 package com.liuyx.wbspider;
 
-import com.liuyx.wbspider.login.LoginInfoEncryption;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import com.liuyx.wbspider.login.Account;
+import com.liuyx.wbspider.login.SimulationLogin;
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.CookieStore;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.protocol.HttpClientContext;
+import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.util.EntityUtils;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
+import sun.misc.IOUtils;
 
 import javax.script.ScriptException;
+import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.lang.reflect.Type;
 import java.util.*;
 
 public class WeiboSpider {
-    private final static String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.110 Safari/537.36";
-    private static Map<String, String> preLogin(String usernameBase64){
-        CloseableHttpClient client = HttpClientBuilder.create().build();
-        String preLoginUrl = "http://login.sina.com.cn/sso/prelogin.php" +
-                "?entry=weibo&callback=sinaSSOController.preloginCallBack" +
-                "&su=" + usernameBase64 +
-                "&rsakt=mod&client=ssologin.js(v1.4.5)&_=" + new Date().getTime();
-//        System.out.println("pre login url: " + preLoginUrl);
-        HttpGet get = new HttpGet(preLoginUrl);
-        String preLoginResultsStr = null;
-        try {
-            get.addHeader("User-Agent", USER_AGENT);
-            get.addHeader("Referer", "https://weibo.com/");
+    public static void run() {
+        List<Account> accounts = Account.genAccountFromText(new File(System.getProperty("user.dir") + "\\src\\main\\resources\\login.txt"));
+        HttpClientContext loginHttpClientContext = SimulationLogin.login(accounts.get(0).getAccount(), accounts.get(0).getPassword());
+        CookieStore loginCookieStore = loginHttpClientContext.getCookieStore();
+
+        String uid = "";
+        String html = httpGet("https://weibo.com/" + uid + "/follow?rightmod=1&wvr=6", loginCookieStore);
+        Document doc = Jsoup.parse(html);
+        for(Element element : doc.getElementsByTag("script")){
+            if(element.html().contains("\"domid\":\"Pl_Official_RelationMyfollow")){
+
+                System.out.println(element.html());
+
+//                String htmlJson = element.toString().substring(16, element.toString().length() - 10);
+//                Gson gson = new Gson();
+//                Type type = new TypeToken<Map<String, String>>() {}.getType();
+//                Map<String, String> map2 = gson.fromJson(htmlJson, type);
+//                System.out.println(map2.get("html"));
+            }
+        }
+
+
+    }
+
+    private static String dump(HttpEntity entity) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(
+                entity.getContent(), "utf8"));
+        StringBuilder content = new StringBuilder();
+        try{
+            String line = null;
+            while((line = br.readLine()) != null){//使用readLine方法，一次读一行
+                content.append(line);
+            }
+            br.close();
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+        return content.toString();
+    }
+
+    private static String httpGet(String url, CookieStore cookieStore) {
+//        // 创建HttpClient上下文
+//        HttpClientContext httpClientContext = HttpClientContext.create();
+//        httpClientContext.setCookieStore(cookieStore);
+//        HttpResponse response = null;
+        String html = null;
+        CloseableHttpClient client = HttpClientBuilder.create()
+                .setDefaultCookieStore(cookieStore)
+                .build();
+        try{
+            HttpGet get = new HttpGet(url);
             HttpResponse response = client.execute(get);
-            preLoginResultsStr = EntityUtils.toString(response.getEntity());
+            html = dump(response.getEntity());
+            get.abort();
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return getParaFromResult(preLoginResultsStr);
-    }
 
-    /**
-     * 从新浪返回的结果字符串中获得参数
-     *
-     * @param result
-     * @return
-     */
-    private static HashMap<String, String> getParaFromResult(String result) {
-        HashMap<String, String> hm = new HashMap<String, String>();
-        result = result.substring(result.indexOf("{") + 1, result.indexOf("}"));
-        String[] r = result.split(",");
-        String[] temp;
-        for (int i = 0; i < r.length; i++) {
-            temp = r[i].split(":");
-            for (int j = 0; j < 2; j++) {
-                if (temp[j].contains("\""))
-                    temp[j] = temp[j].substring(1, temp[j].length() - 1);
-            }
-            hm.put(temp[0], temp[1]);
-        }
-        return hm;
-    }
-
-    public static void login(String usernameBase64, String passwd) {
-        CloseableHttpClient client = HttpClientBuilder.create().build();
-
-        try {
-            // prelogin
-            Map<String, String> params = preLogin(usernameBase64);
-
-            /********登录操作*********/
-            HttpPost post = new HttpPost("http://login.sina.com.cn/sso/login.php?client=ssologin.js(v1.4.19)");
-
-            post.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.110 Safari/537.36");
-            post.setHeader("Origin", "http://weibo.com");
-            post.setHeader("Referer", "http://weibo.com/");
-            post.setHeader("Content-Type", "application/x-www-form-urlencoded");
-
-            post.setHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-            post.setHeader("Accept-Language", "zh-cn,zh;q=0.5");
-            post.setHeader("Accept-Charset", "GB2312,utf-8;q=0.7,*;q=0.7");
-
-            List<NameValuePair> nvps = new ArrayList<NameValuePair>();
-            nvps.add(new BasicNameValuePair("entry", "weibo"));
-            nvps.add(new BasicNameValuePair("gateway", "1"));
-            nvps.add(new BasicNameValuePair("from", ""));
-            nvps.add(new BasicNameValuePair("savestate", "7"));
-            nvps.add(new BasicNameValuePair("useticket", "1"));
-            nvps.add(new BasicNameValuePair("vsnf", "1"));
-
-            nvps.add(new BasicNameValuePair("su", usernameBase64));
-            nvps.add(new BasicNameValuePair("service", "miniblog"));
-            nvps.add(new BasicNameValuePair("servertime", params.get("servertime")));
-            nvps.add(new BasicNameValuePair("nonce", params.get("nonce")));
-            nvps.add(new BasicNameValuePair("pwencode", "rsa2"));
-            nvps.add(new BasicNameValuePair("rsakv", params.get("rsakv")));
-            nvps.add(new BasicNameValuePair("sp",
-                    LoginInfoEncryption.encryptPasswdWithRSA2(passwd, params.get("servertime"), params.get("nonce"), params.get("pubkey")))
-            );
-            nvps.add(new BasicNameValuePair("sr", "1920*1080"));
-            nvps.add(new BasicNameValuePair("encoding", "UTF-8"));
-            nvps.add(new BasicNameValuePair("prelt", "139"));
-//            nvps.add(new BasicNameValuePair("pagerefer", "http://i.firefoxchina.cn/old/"));
-            nvps.add(new BasicNameValuePair("returntype", "META"));
-            nvps.add(new BasicNameValuePair("url",
-                    "http://weibo.com/ajaxlogin.php?framelogin=1&callback=parent.sinaSSOController.feedBackUrlCallBack"));
-
-            post.setEntity(new UrlEncodedFormEntity(nvps, "UTF-8"));
-
-            HttpResponse response = client.execute(post);
-
-            String entity = EntityUtils.toString(response.getEntity());
-
-            if (entity.replace("\\", "").contains("\"retcode\":0")) {
-                System.out.println("abc");
-                System.out.println(entity.indexOf("https://passport.weibo.com/wbsso/login"));
-                System.out.println(entity.indexOf("code=0"));
-                System.out.println(entity.length());
-                String url = entity.substring(entity.indexOf("https://passport.weibo.com/wbsso/login?"), entity.indexOf("code=0")+6 );
-                System.out.println(url);
-
-                String strScr = "";
-                String nick = "暂无";     //昵称
-
-                // 获取到实际url进行连接
-                HttpGet getMethod = new HttpGet(url);
-                response = client.execute(getMethod);
-                entity = EntityUtils.toString(response.getEntity());
-
-                nick = entity.substring(entity.indexOf("displayname") + 14,
-                        entity.lastIndexOf("userdomain") - 3).trim();
-
-                url = entity.substring(entity.indexOf("userdomain") + 13,
-                        entity.lastIndexOf("\""));
-                getMethod = new HttpGet("http://weibo.com/"+url);
-                response = client.execute(getMethod);
-                entity = EntityUtils.toString(response.getEntity());
-
-                System.out.println(entity);
-            }
-
-
-            } catch (Exception e) {
-            e.printStackTrace();
-
-        }
+        return html;
     }
 
     public static void main(String[] args) throws ScriptException, NoSuchMethodException {
-        login("", "");
-
+        run();
     }
 
 }
