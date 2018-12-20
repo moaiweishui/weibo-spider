@@ -14,7 +14,7 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 
 public class SimulationLogin {
@@ -150,4 +150,54 @@ public class SimulationLogin {
 
         return httpClientContext;
     }
+
+    public static boolean dumpCookiesToLocal(CookieStore cookieStore){
+        // System.getProperty("user.dir") + "\\src\\main\\resources\\login.txt"
+        Long timestamp = new Date().getTime();
+        String filename = "cookies_" + timestamp.toString();
+        File file = new File(System.getProperty("user.dir") + "\\src\\main\\resources\\" + filename);
+        boolean success = true;
+        try{
+            if(!file.exists()){
+                file.createNewFile();
+            }
+            FileOutputStream fileOutputStream = new FileOutputStream(file);
+            ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
+            objectOutputStream.writeObject(cookieStore);
+            objectOutputStream.close();
+        } catch (IOException e) {
+            success = false;
+            e.printStackTrace();
+        }
+
+        return success;
+    }
+
+    public static CookieStore recoverCookiesFromLocal(File file){
+        CookieStore cookieStore = null;
+        try{
+            FileInputStream fileInputStream = new FileInputStream(file);
+            ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
+            cookieStore = (CookieStore)  objectInputStream.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return cookieStore;
+    }
+
+    public static CookieStore getCookies(String type){
+        CookieStore cookieStore = null;
+        if("remote".equals(type)){
+            List<Account> accounts = Account.genAccountFromText(new File(System.getProperty("user.dir") + "\\src\\main\\resources\\login.txt"));
+            HttpClientContext loginHttpClientContext = SimulationLogin.login(accounts.get(0).getAccount(), accounts.get(0).getPassword());
+            cookieStore = loginHttpClientContext.getCookieStore();
+            if(dumpCookiesToLocal(cookieStore)){
+                System.out.println("Dump cookies to local succeed");
+            }
+        }else if("local".equals(type)){
+            cookieStore = recoverCookiesFromLocal(new File(System.getProperty("user.dir") + "\\src\\main\\resources\\cookies_1545298741972"));
+        }
+        return cookieStore;
+    }
+
 }

@@ -26,27 +26,40 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Type;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class WeiboSpider {
     public static void run() {
-        List<Account> accounts = Account.genAccountFromText(new File(System.getProperty("user.dir") + "\\src\\main\\resources\\login.txt"));
-        HttpClientContext loginHttpClientContext = SimulationLogin.login(accounts.get(0).getAccount(), accounts.get(0).getPassword());
-        CookieStore loginCookieStore = loginHttpClientContext.getCookieStore();
+        CookieStore loginCookieStore = SimulationLogin.getCookies("local");
 
         String uid = "";
         String html = httpGet("https://weibo.com/" + uid + "/follow?rightmod=1&wvr=6", loginCookieStore);
-        System.out.println(html);
+//        System.out.println(html);
         Document doc = Jsoup.parse(html);
         for(Element element : doc.getElementsByTag("script")){
             if(element.html().contains("\"domid\":\"Pl_Official_RelationMyfollow")){
+                Pattern pattern = Pattern.compile("FM.view\\(.*\"html\":\"(.*)\\}\\)");
+                Matcher m = pattern.matcher(element.html());
+                if(m.find()){
+                    String htmlJson = m.group(1);
+                    System.out.println(htmlJson);
+//                    htmlJson = htmlJson.replaceAll("[\\\\t|\\\\n|\\\\r]", "");
+                    htmlJson = htmlJson.replaceAll("\\\\", "");
+//                    System.out.println(htmlJson);
+                    Document followDoc = Jsoup.parse(htmlJson);
+                    System.out.println(followDoc.toString());
+                    for(Element member : followDoc.getElementsByClass("member_li")){
+                        System.out.println(member.toString());
+                        System.out.println("\n\n");
+                    }
+//                    Gson gson = new Gson();
+//                    Type type = new TypeToken<Map<String, String>>() {}.getType();
+//                    Map<String, String> map2 = gson.fromJson(htmlJson, type);
+//                    System.out.println(map2.get("html"));
+                }
 
-                System.out.println(element.html());
 
-//                String htmlJson = element.toString().substring(16, element.toString().length() - 10);
-//                Gson gson = new Gson();
-//                Type type = new TypeToken<Map<String, String>>() {}.getType();
-//                Map<String, String> map2 = gson.fromJson(htmlJson, type);
-//                System.out.println(map2.get("html"));
             }
         }
 
@@ -92,6 +105,9 @@ public class WeiboSpider {
 
     public static void main(String[] args) throws ScriptException, NoSuchMethodException {
         run();
+//        String testStr = "<div class=\"markup_choose\"></div>\r\n </li>";
+//        testStr = testStr.replaceAll("[\\r|\\n]", "");
+//        System.out.println(testStr);
     }
 
 }
