@@ -6,6 +6,8 @@ import com.liuyx.wbspider.model.Follower;
 import javax.script.ScriptException;
 import java.util.*;
 
+import static com.liuyx.wbspider.exporter.FollowExporter.exportSelfFollowersToCSV;
+
 public class WeiboSpider {
     public static void run() {
 
@@ -17,6 +19,8 @@ public class WeiboSpider {
         List<Follower> followers = followerFetcher.fetchSelfFollowers("");
         followers.forEach(System.out::println);
         System.out.println(followers.size());
+        exportSelfFollowersToCSV(followers, System.getProperty("user.dir") + "\\out\\");
+
     }
 
 }

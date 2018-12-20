@@ -52,7 +52,8 @@ public class FollowPageParserImpl implements FollowPageParser {
                 }
 
                 if(titleElement != null){
-                    String uid = titleElement.attr("usercard");
+                    String[] usercard = titleElement.attr("usercard").split("=");
+                    String uid = usercard.length == 2 ? usercard[1] : null;
                     String nickname = titleElement.attr("title");
                     String href = titleElement.attr("href");
 
