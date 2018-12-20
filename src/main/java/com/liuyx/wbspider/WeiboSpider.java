@@ -35,6 +35,7 @@ public class WeiboSpider {
 
         String uid = "";
         String html = httpGet("https://weibo.com/" + uid + "/follow?rightmod=1&wvr=6", loginCookieStore);
+        System.out.println(html);
         Document doc = Jsoup.parse(html);
         for(Element element : doc.getElementsByTag("script")){
             if(element.html().contains("\"domid\":\"Pl_Official_RelationMyfollow")){
