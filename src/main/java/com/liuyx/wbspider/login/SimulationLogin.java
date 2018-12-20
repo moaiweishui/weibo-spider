@@ -195,7 +195,7 @@ public class SimulationLogin {
                 System.out.println("Dump cookies to local succeed");
             }
         }else if("local".equals(type)){
-            cookieStore = recoverCookiesFromLocal(new File(System.getProperty("user.dir") + "\\src\\main\\resources\\cookies_1545298741972"));
+            cookieStore = recoverCookiesFromLocal(new File(System.getProperty("user.dir") + "\\src\\main\\resources\\cookies_1545309877442"));
         }
         return cookieStore;
     }

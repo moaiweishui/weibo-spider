@@ -4,6 +4,9 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.liuyx.wbspider.login.Account;
 import com.liuyx.wbspider.login.SimulationLogin;
+import com.liuyx.wbspider.model.Follower;
+import com.liuyx.wbspider.parser.FollowPageParser;
+import com.liuyx.wbspider.parser.FollowPageParserImpl;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
@@ -29,78 +32,25 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.liuyx.wbspider.util.HttpUtils.httpGet;
+
 public class WeiboSpider {
     public static void run() {
         CookieStore loginCookieStore = SimulationLogin.getCookies("local");
 
         String uid = "";
-        String html = httpGet("https://weibo.com/" + uid + "/follow?rightmod=1&wvr=6", loginCookieStore);
+//        String html = httpGet("https://weibo.com/" + uid + "/follow?rightmod=1&wvr=6", loginCookieStore);
 //        System.out.println(html);
-        Document doc = Jsoup.parse(html);
-        for(Element element : doc.getElementsByTag("script")){
-            if(element.html().contains("\"domid\":\"Pl_Official_RelationMyfollow")){
-                Pattern pattern = Pattern.compile("FM.view\\(.*\"html\":\"(.*)\\}\\)");
-                Matcher m = pattern.matcher(element.html());
-                if(m.find()){
-                    String htmlJson = m.group(1);
-                    System.out.println(htmlJson);
-//                    htmlJson = htmlJson.replaceAll("[\\\\t|\\\\n|\\\\r]", "");
-                    htmlJson = htmlJson.replaceAll("\\\\", "");
-//                    System.out.println(htmlJson);
-                    Document followDoc = Jsoup.parse(htmlJson);
-                    System.out.println(followDoc.toString());
-                    for(Element member : followDoc.getElementsByClass("member_li")){
-                        System.out.println(member.toString());
-                        System.out.println("\n\n");
-                    }
-//                    Gson gson = new Gson();
-//                    Type type = new TypeToken<Map<String, String>>() {}.getType();
-//                    Map<String, String> map2 = gson.fromJson(htmlJson, type);
-//                    System.out.println(map2.get("html"));
-                }
 
+        String url = "https://weibo.com/p//myfollow?t=1&cfs=&Pl_Official_RelationMyfollow__95_page=2#Pl_Official_RelationMyfollow__95";
+        String html = httpGet(url, loginCookieStore);
+        FollowPageParser followPageParser = new FollowPageParserImpl();
+        List<Follower> followers = followPageParser.parse(html);
 
-            }
-        }
+//        System.out.println(followers.size());
 
+        followers.forEach(System.out::println);
 
-    }
-
-    private static String dump(HttpEntity entity) throws IOException {
-        BufferedReader br = new BufferedReader(new InputStreamReader(
-                entity.getContent(), "utf8"));
-        StringBuilder content = new StringBuilder();
-        try{
-            String line = null;
-            while((line = br.readLine()) != null){//使用readLine方法，一次读一行
-                content.append(line);
-            }
-            br.close();
-        }catch(Exception e){
-            e.printStackTrace();
-        }
-        return content.toString();
-    }
-
-    private static String httpGet(String url, CookieStore cookieStore) {
-//        // 创建HttpClient上下文
-//        HttpClientContext httpClientContext = HttpClientContext.create();
-//        httpClientContext.setCookieStore(cookieStore);
-//        HttpResponse response = null;
-        String html = null;
-        CloseableHttpClient client = HttpClientBuilder.create()
-                .setDefaultCookieStore(cookieStore)
-                .build();
-        try{
-            HttpGet get = new HttpGet(url);
-            HttpResponse response = client.execute(get);
-            html = dump(response.getEntity());
-            get.abort();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return html;
     }
 
     public static void main(String[] args) throws ScriptException, NoSuchMethodException {
