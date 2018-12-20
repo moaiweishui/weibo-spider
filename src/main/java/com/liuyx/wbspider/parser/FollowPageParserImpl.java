@@ -38,22 +38,30 @@ public class FollowPageParserImpl implements FollowPageParser {
         List<Follower> followers = new ArrayList<>();
         if(followHtmlSegment != null){
             for(Element member : followHtmlSegment.getElementsByClass("member_li")){
-                Element titleElement = member.getElementsByClass("title").first()
-                        .getElementsByClass("S_txt1").first();
-                Element statuElement = member.getElementsByClass("statu").first()
-                        .getElementsByClass("S_txt1").first();
-                Element textElement = member.getElementsByClass("text").first();
-                Element infoFromElement = member.getElementsByClass("info_from").first()
-                        .getElementsByClass("S_link2").first();
+                Element titleElement = null;
+                Element textElement = null;
+                Element infoFromElement = null;
+                try{
+                    titleElement = member.getElementsByClass("title").first()
+                            .getElementsByClass("S_txt1").first();
+                    textElement = member.getElementsByClass("text").first();
+                    infoFromElement = member.getElementsByClass("info_from").first()
+                            .getElementsByClass("S_link2").first();
+                } catch (Exception e){
+                    e.printStackTrace();
+                }
 
-                String nickname = titleElement.attr("title");
-                String href = titleElement.attr("href");
-                String uid = titleElement.attr("usercard");
-                String introduction = textElement.text();
-                String from = infoFromElement.text();
+                if(titleElement != null){
+                    String uid = titleElement.attr("usercard");
+                    String nickname = titleElement.attr("title");
+                    String href = titleElement.attr("href");
 
-                if(nickname != null && uid != null){
-                    followers.add(new Follower(uid, nickname, introduction, from, href));
+                    String introduction = textElement != null ? textElement.text() : null;
+                    String from = infoFromElement != null ? infoFromElement.text() : null;
+
+                    if(nickname != null && uid != null){
+                        followers.add(new Follower(uid, nickname, introduction, from, href));
+                    }
                 }
             }
         }
@@ -62,7 +70,7 @@ public class FollowPageParserImpl implements FollowPageParser {
     }
 
     @Override
-    public Long followerPageCount(String pageTextContent) {
+    public Long getPageCount(String pageTextContent) {
         Document page = Jsoup.parse(pageTextContent);
         System.out.println(page.toString());
         return null;

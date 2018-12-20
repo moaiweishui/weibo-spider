@@ -7,5 +7,5 @@ import java.util.List;
 public interface FollowPageParser {
     List<Follower> parse(String pageTextContent);
 
-    Long followerPageCount(String pageTextContent);
+    Long getPageCount(String pageTextContent);
 }
