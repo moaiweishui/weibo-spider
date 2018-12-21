@@ -1,6 +1,7 @@
 .gradle/
 .idea/
 .out/
+.log/
 *.iml
 login.txt
 cookies_*

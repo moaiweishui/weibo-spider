@@ -41,13 +41,14 @@ public class FollowPageParserImpl implements FollowPageParser {
                 Element titleElement = null;
                 Element textElement = null;
                 Element infoFromElement = null;
+
                 try{
                     titleElement = member.getElementsByClass("title").first()
                             .getElementsByClass("S_txt1").first();
                     textElement = member.getElementsByClass("text").first();
                     infoFromElement = member.getElementsByClass("info_from").first()
                             .getElementsByClass("S_link2").first();
-                } catch (Exception e){
+                } catch (NullPointerException e){
                     e.printStackTrace();
                 }
 
